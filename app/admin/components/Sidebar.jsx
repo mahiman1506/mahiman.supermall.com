@@ -5,6 +5,7 @@ import {
     BadgePercentIcon,
     Building,
     LayoutDashboard,
+    SettingsIcon,
     StoreIcon,
     Tags,
 } from "lucide-react";
@@ -19,9 +20,10 @@ export default function Sidebar({ isOpen, onClose }) {
     const menu = [
         { id: 1, name: "Dashboard", link: "/admin", icon: <LayoutDashboard className="h-5 w-5" /> },
         { id: 2, name: "Shop", link: "/admin/shop", icon: <StoreIcon className="h-5 w-5" /> },
-        { id: 3, name: "Offers", link: "/admin/offers", icon: <BadgePercentIcon className="h-5 w-5" /> },
-        { id: 4, name: "Categories", link: "/admin/categories", icon: <Tags className="h-5 w-5" /> },
-        { id: 5, name: "Floors", link: "/admin/floors", icon: <Building className="h-5 w-5" /> },
+        // { id: 3, name: "Offers", link: "/admin/offers", icon: <BadgePercentIcon className="h-5 w-5" /> },
+        { id: 3, name: "Categories", link: "/admin/categories", icon: <Tags className="h-5 w-5" /> },
+        { id: 4, name: "Floors", link: "/admin/floors", icon: <Building className="h-5 w-5" /> },
+        { id: 5, name: "Settings", link: "/admin/settings", icon: <SettingsIcon className="h-5 w-5" /> },
     ];
 
     const handleClick = (link) => {

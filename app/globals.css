@@ -1,142 +1,236 @@
 @import "tailwindcss";
 
-
-
-
 @keyframes pulseGlow {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.6);
+  }
 
-    0%,
-    100% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.6);
-    }
-
-    50% {
-        transform: scale(1.1);
-        box-shadow: 0 0 10px rgba(0, 123, 255, 0.6);
-    }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.6);
+  }
 }
 
 .animate-pulseGlow {
-    animation: pulseGlow 0.6s ease;
+  animation: pulseGlow 0.6s ease;
 }
 
 @keyframes swing {
-    20% {
-        transform: rotate(15deg);
-    }
+  20% {
+    transform: rotate(15deg);
+  }
 
-    40% {
-        transform: rotate(-10deg);
-    }
+  40% {
+    transform: rotate(-10deg);
+  }
 
-    60% {
-        transform: rotate(5deg);
-    }
+  60% {
+    transform: rotate(5deg);
+  }
 
-    80% {
-        transform: rotate(-5deg);
-    }
+  80% {
+    transform: rotate(-5deg);
+  }
 
-    100% {
-        transform: rotate(0deg);
-    }
+  100% {
+    transform: rotate(0deg);
+  }
 }
 
 .animate-swing {
-    animation: swing 0.5s ease;
+  animation: swing 0.5s ease;
 }
 
 @keyframes bounce {
+  0%,
+  100% {
+    transform: scale(1);
+  }
 
-    0%,
-    100% {
-        transform: scale(1);
-    }
-
-    50% {
-        transform: scale(1.2);
-    }
+  50% {
+    transform: scale(1.2);
+  }
 }
 
 .animate-bounceOnce {
-    animation: bounce 0.4s ease;
+  animation: bounce 0.4s ease;
 }
 
 @keyframes wiggle {
-    0% {
-        transform: rotate(0deg);
-    }
+  0% {
+    transform: rotate(0deg);
+  }
 
-    15% {
-        transform: rotate(-15deg);
-    }
+  15% {
+    transform: rotate(-15deg);
+  }
 
-    30% {
-        transform: rotate(15deg);
-    }
+  30% {
+    transform: rotate(15deg);
+  }
 
-    45% {
-        transform: rotate(-10deg);
-    }
+  45% {
+    transform: rotate(-10deg);
+  }
 
-    60% {
-        transform: rotate(10deg);
-    }
+  60% {
+    transform: rotate(10deg);
+  }
 
-    75% {
-        transform: rotate(-5deg);
-    }
+  75% {
+    transform: rotate(-5deg);
+  }
 
-    100% {
-        transform: rotate(0deg);
-    }
+  100% {
+    transform: rotate(0deg);
+  }
 }
 
 .animate-wiggle {
-    animation: wiggle 0.6s ease;
+  animation: wiggle 0.6s ease;
 }
 
 @keyframes slideUp {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
 
-    0%,
-    100% {
-        transform: translateY(0);
-    }
-
-    50% {
-        transform: translateY(-6px);
-    }
+  50% {
+    transform: translateY(-6px);
+  }
 }
 
 .animate-slideUp {
-    animation: slideUp 0.4s ease;
+  animation: slideUp 0.4s ease;
 }
 
 @keyframes slideDown {
-
-    0%,
-    100% {
-        transform: translateY(0);
-    }
-
-    50% {
-        transform: translateY(6px);
-    }
+  0% {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
-.animate-slideDown {
-    animation: slideDown 0.4s ease;
+@keyframes scrollDigit {
+  0% {
+    transform: translateY(0%);
+    opacity: 1;
+  }
+
+  /* keep visible during most of the scroll */
+  85% {
+    opacity: 1;
+  }
+
+  /* fade out at the end so the final digit (which fades in) sits cleanly on top */
+  100% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes fadeInDigit {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@layer utilities {
+  .animate-slideDown {
+    animation: slideDown 0.6s ease-out;
+  }
+
+  .animate-scrollDigit {
+    animation: scrollDigit 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  }
+
+  .animate-fadeInDigit {
+    animation: fadeInDigit 0.4s ease-out forwards;
+  }
+
+  /* stagger for per-digit delay */
+  .stagger-0 {
+    animation-delay: 0s;
+  }
+  .stagger-1 {
+    animation-delay: 0.1s;
+  }
+  .stagger-2 {
+    animation-delay: 0.2s;
+  }
+  .stagger-3 {
+    animation-delay: 0.3s;
+  }
+  .stagger-4 {
+    animation-delay: 0.4s;
+  }
+  .stagger-5 {
+    animation-delay: 0.5s;
+  }
+  .stagger-6 {
+    animation-delay: 0.6s;
+  }
+  .stagger-7 {
+    animation-delay: 0.7s;
+  }
+  .stagger-8 {
+    animation-delay: 0.8s;
+  }
+  .stagger-9 {
+    animation-delay: 0.9s;
+  }
+}
+
+.input {
+  @apply w-full border rounded-lg px-3 py-2 text-sm outline-none border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition;
+}
+
+.btn {
+  @apply px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition;
+}
+
+.btn-red {
+  @apply px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition;
+}
+
+.btn-outline-red {
+  @apply px-4 py-2 rounded-lg border border-red-600 text-red-600 hover:bg-red-50 transition;
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(5px);
+    transform: scale(0.95);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: scale(1);
   }
 }
 

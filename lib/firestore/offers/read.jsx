@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { collection, onSnapshot } from "firebase/firestore"
+import { collection, onSnapshot, doc, getDoc } from "firebase/firestore"
 import { db } from "../firebase"
 
 export function useOffer() {
@@ -32,4 +32,18 @@ export function useOffer() {
     }, [])
 
     return { data, error, isLoading }
+}
+
+// Client helper to fetch a single offer by id
+export async function getOfferById(id) {
+    if (!id) return null;
+    try {
+        const ref = doc(db, "offers", id);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) return null;
+        return { id: snap.id, ...snap.data() };
+    } catch (err) {
+        console.error("Error fetching offer by id:", err);
+        throw err;
+    }
 }

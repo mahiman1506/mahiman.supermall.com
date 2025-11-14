@@ -155,8 +155,15 @@ export default function AdminHeader({ isSidebarOpen, onToggleSidebar }) {
             <div className="flex items-center gap-4 relative">
                 {/* User Icon */}
                 <div ref={userRef} className="relative">
-                    <button onClick={handleUserClick}>
+                    {/* <button onClick={handleUserClick}>
                         <UserIcon className={`h-6 w-6 text-[#1E1E2F] cursor-pointer transition-transform`} />
+                    </button> */}
+                    <button onClick={handleUserClick}>
+                        <UserIcon
+                            className={`h-6 w-6 text-[#1E1E2F] cursor-pointer transition-transform 
+            ${showUserInfo ? "animate-slideDown" : "animate-slideUp"}
+        `}
+                        />
                     </button>
 
                     {showUserInfo && user && (

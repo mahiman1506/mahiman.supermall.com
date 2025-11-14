@@ -108,7 +108,7 @@ export default function Page() {
             if (role === "admin") {
                 router.push("/admin");
             } else if (role === "shop") {
-                router.push("/shopLayout");
+                router.push("/shop");
             } else {
                 router.push("/dashboard");
             }

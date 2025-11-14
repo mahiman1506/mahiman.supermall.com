@@ -23,11 +23,11 @@ export default function Page() {
             )}
 
             {role === "shop" ? (
-                <Link href={"/shopLayout"}>
+                <Link href={"/shop"}>
                     <h1>Shop panel</h1>
                 </Link>
             ) : (
-                <Link className="hidden " href={"/shopLayout"}>
+                <Link className="hidden " href={"/shop"}>
                     <h1>Shop panel</h1>
                 </Link>
             )}

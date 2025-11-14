@@ -1,10 +1,10 @@
-"use client";
+"use client"
 
-import Listview from "./components/Listview";
-import { BadgePercentIcon } from "lucide-react";
+import { Boxes } from "lucide-react"
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Loading from "./loading";
-import { useRouter } from "next/navigation";
+import Listview from "./components/listview";
 
 export default function Page() {
     const [isLoading, setIsLoading] = useState(false);
@@ -14,18 +14,17 @@ export default function Page() {
         setIsLoading(true);
         // Simulate short loading delay before navigation
         setTimeout(() => {
-            router.push("/admin/offers/Form");
+            router.push("/shop/products/Form");
         }, 800);
     };
-
     return (
         <main className="flex flex-col gap-5">
             {/* Header */}
             <div className="flex items-center justify-between bg-[#E2E8F0] rounded-lg px-6 py-3 shadow">
                 {/* Left: Icon + Title */}
                 <h1 className="flex items-center gap-3 text-lg font-semibold text-gray-800">
-                    <BadgePercentIcon size={22} />
-                    Offers
+                    <Boxes size={30} />
+                    Product
                 </h1>
 
                 {/* Right: Button */}
@@ -44,5 +43,5 @@ export default function Page() {
             {/* Listview */}
             <Listview />
         </main>
-    );
+    )
 }
