@@ -532,6 +532,14 @@ export default function Page() {
         <h1 className="text-2xl font-semibold">
           {id ? "Update" : "Create"} Shop
         </h1>
+        <button
+          type="button"
+          onClick={() => router.push("/admin/shop")}
+          className="bg-gray-300 px-6 py-2 rounded-lg w-full sm:w-auto hover:bg-gray-400 hover:text-white"
+          disabled={isLoading}
+        >
+          Cancel
+        </button>
       </div>
 
       <form
@@ -790,15 +798,6 @@ export default function Page() {
               : id
               ? "Update"
               : "Create"}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => router.push("/admin/shop")}
-            className="bg-gray-300 px-6 py-2 rounded-lg w-full sm:w-auto hover:bg-gray-400 hover:text-white"
-            disabled={isLoading}
-          >
-            Cancel
           </button>
         </div>
       </form>

@@ -2,18 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  BadgePercentIcon,
-  Building2Icon,
   BuildingIcon,
-  HomeIcon,
-  InfoIcon,
+  LayoutDashboardIcon,
   LogOutIcon,
   Menu,
-  PhoneIcon,
   SettingsIcon,
   ShoppingCartIcon,
-  StoreIcon,
-  TagsIcon,
   UserIcon,
   X,
 } from "lucide-react";
@@ -376,7 +370,7 @@ export default function UserHeader() {
                       className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded text-blue-600 font-medium"
                       onClick={() => setShowLogout(false)}
                     >
-                      <HomeIcon className="h-5 w-5" />
+                      <LayoutDashboardIcon className="h-5 w-5" />
                       Dashboard
                     </Link>
 

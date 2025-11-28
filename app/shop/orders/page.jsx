@@ -60,12 +60,25 @@ export default function Page() {
     switch (status) {
       case "pending":
         return "bg-yellow-100 text-yellow-700";
-      case "shipped":
+
+      case "confirmed":
         return "bg-blue-100 text-blue-700";
+
+      case "processing":
+        return "bg-purple-100 text-purple-700";
+
+      case "on-the-way":
+        return "bg-orange-100 text-orange-700";
+
+      case "delivered":
+        return "bg-teal-100 text-teal-700";
+
       case "completed":
-        return "bg-green-100 text-green-700";
+        return "bg-sky-100 text-sky-700";
+
       case "cancelled":
         return "bg-red-100 text-red-700";
+
       default:
         return "bg-gray-100 text-gray-700";
     }

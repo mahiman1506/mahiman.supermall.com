@@ -15,10 +15,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 
 export default function ShopDetailsPage() {
-  const { id: shopId } = useParams(); // ⭐ dynamic shopId
+  const { id: shopId } = useParams();
   const [shop, setShop] = useState(null);
   const [categories, setCategories] = useState([]);
-
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,13 +29,10 @@ export default function ShopDetailsPage() {
   const getCategoryName = (id) =>
     categories?.find((cat) => cat.id === id)?.name || "Unknown";
 
-  // -------------------------
-  // FETCH SHOP + CATEGORIES
-  // -------------------------
+  // FETCH SHOP + CATEGORIES ----------
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch Shop Data
         const shopSnap = await getDocs(collection(db, "shop"));
         const shops = shopSnap.docs.map((doc) => ({
           id: doc.id,
@@ -45,7 +41,6 @@ export default function ShopDetailsPage() {
         const foundShop = shops.find((s) => s.id === shopId);
         setShop(foundShop || null);
 
-        // Fetch categories
         const catSnap = await getDocs(collection(db, "categories"));
         setCategories(
           catSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
@@ -58,9 +53,7 @@ export default function ShopDetailsPage() {
     fetchData();
   }, [shopId]);
 
-  // -------------------------
-  // FETCH PRODUCTS FOR SHOP
-  // -------------------------
+  // FETCH PRODUCTS ----------
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -70,12 +63,10 @@ export default function ShopDetailsPage() {
         );
 
         const prodSnap = await getDocs(qRef);
-        const prodData = prodSnap.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
 
-        setProducts(prodData);
+        setProducts(
+          prodSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        );
       } catch (error) {
         console.error("Error fetching products:", error);
       } finally {
@@ -95,10 +86,20 @@ export default function ShopDetailsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-gray-50 pt-24">
       <UserHeader />
 
-      <section className="max-w-7xl mx-auto px-4 py-10">
+      {/* ⭐ BACK BUTTON */}
+      <div className="max-w-7xl mx-auto px-4 mt-4 mb-2">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 text-gray-700 hover:text-black transition"
+        >
+          ← Back
+        </button>
+      </div>
+
+      <section className="max-w-7xl mx-auto px-4">
         <h1 className="text-3xl font-bold mb-6 text-gray-800">{shop.name}</h1>
 
         {/* SHOP DETAILS */}
@@ -109,6 +110,7 @@ export default function ShopDetailsPage() {
               alt={shop.name}
               className="w-24 object-cover rounded-lg"
             />
+
             <div>
               <h2 className="text-xl font-semibold">{shop.name}</h2>
               <p className="text-gray-600">{getCategoryName(shop.category)}</p>
@@ -116,7 +118,6 @@ export default function ShopDetailsPage() {
             </div>
           </div>
 
-          {/* Banner */}
           {shop.bannerImage && (
             <div className="mt-4">
               <img
@@ -128,9 +129,7 @@ export default function ShopDetailsPage() {
           )}
         </div>
 
-        {/* -------------------------------------- */}
-        {/* ⭐ LIST OF PRODUCTS FOR THIS SHOP ⭐ */}
-        {/* -------------------------------------- */}
+        {/* PRODUCTS */}
         <h2 className="text-2xl font-semibold mb-4">Products</h2>
 
         {loading ? (
@@ -144,7 +143,6 @@ export default function ShopDetailsPage() {
                 key={product.id}
                 className="bg-white rounded-xl shadow p-4 hover:shadow-lg transition"
               >
-                {/* Image */}
                 <img
                   src={product.mainImageURL || "/placeholder.png"}
                   alt={product.name}
@@ -152,7 +150,22 @@ export default function ShopDetailsPage() {
                 />
 
                 <div className="mt-3">
-                  <h3 className="font-semibold truncate">{product.name}</h3>
+                  <div className="flex justify-between px-2">
+                    <h3 className="font-semibold truncate">{product.name}</h3>
+
+                    {product.status && (
+                      <span
+                        className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          product.stock > 0
+                            ? "bg-green-100 text-green-600"
+                            : "bg-red-100 text-red-600"
+                        }`}
+                      >
+                        {product.stock > 0 ? "In Stock" : "Out of Stock"}
+                      </span>
+                    )}
+                  </div>
+
                   <p className="text-gray-500 text-sm">
                     ₹ {product.price?.toLocaleString()}
                   </p>

@@ -2,185 +2,357 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Minus, Plus, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { db } from "@/lib/firestore/firebase";
 import {
   collection,
-  doc,
-  getDocs,
-  updateDoc,
   deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  setDoc,
+  updateDoc,
+  where,
 } from "firebase/firestore";
-import { db } from "@/lib/firestore/firebase";
 import { useRouter } from "next/navigation";
+
+/* compute discount */
+function computeDiscountForOffer(cart, offer) {
+  if (!offer) return 0;
+  if (offer.status !== "Active") return 0;
+
+  const now = new Date();
+  if (offer.startDate && new Date(offer.startDate) > now) return 0;
+  if (offer.endDate && new Date(offer.endDate) < now) return 0;
+
+  const subtotal = cart.reduce((a, b) => a + b.price * (b.quantity || 1), 0);
+
+  let discount = 0;
+
+  if (offer.type === "flat") discount = Number(offer.discountValue);
+
+  if (offer.type === "percentage") {
+    discount = (subtotal * Number(offer.discountValue)) / 100;
+
+    if (offer.maxDiscount) {
+      discount = Math.min(discount, Number(offer.maxDiscount));
+    }
+  }
+
+  return Math.max(0, discount);
+}
+
+/* Validations */
+async function validateOfferForCart(user, cartItems, offer) {
+  if (!offer) return { ok: false, reason: "Offer not found" };
+
+  const now = new Date();
+
+  if (offer.status !== "Active") return { ok: false, reason: "Offer inactive" };
+
+  if (offer.startDate && new Date(offer.startDate) > now)
+    return { ok: false, reason: "Offer not started" };
+
+  if (offer.endDate && new Date(offer.endDate) < now)
+    return { ok: false, reason: "Offer expired" };
+
+  if (offer.usageLimit) {
+    const usageRef = doc(db, "users", user.uid, "offerUsage", offer.id);
+    const usageSnap = await getDoc(usageRef);
+
+    const used = usageSnap.exists() ? usageSnap.data().count || 0 : 0;
+
+    if (used >= Number(offer.usageLimit)) {
+      return {
+        ok: false,
+        reason: "Offer usage limit reached",
+      };
+    }
+  }
+
+  const discount = computeDiscountForOffer(cartItems, offer);
+
+  if (discount <= 0) return { ok: false, reason: "Offer gives no discount" };
+
+  return { ok: true, discount };
+}
 
 export default function CartPage() {
   const { user } = useAuth();
-  const [cart, setCart] = useState([]);
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // ----------------------------------------------------
-  // ✅ FETCH CART DATA FROM FIRESTORE
-  // ----------------------------------------------------
-  const fetchCart = async () => {
+  const [cart, setCart] = useState([]);
+  const [offers, setOffers] = useState([]);
+
+  const [appliedOffer, setAppliedOffer] = useState(null);
+
+  const [bestOffer, setBestOffer] = useState(null);
+
+  const [offerInput, setOfferInput] = useState("");
+  const [offerError, setOfferError] = useState("");
+
+  const [loading, setLoading] = useState(true);
+  const [checking, setChecking] = useState(false);
+
+  // Load cart + offers
+  useEffect(() => {
     if (!user) return;
 
-    const cartRef = collection(db, "users", user.uid, "cart");
-    const snap = await getDocs(cartRef);
+    (async () => {
+      const c = await getDocs(collection(db, "users", user.uid, "cart"));
+      setCart(c.docs.map((d) => ({ id: d.id, ...d.data() })));
 
-    const items = snap.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+      const o = await getDocs(
+        query(collection(db, "offers"), where("status", "==", "Active"))
+      );
 
-    setCart(items);
-    setLoading(false);
-  };
+      const offerList = o.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setOffers(offerList);
 
-  useEffect(() => {
-    fetchCart();
+      setLoading(false);
+    })();
   }, [user]);
 
-  // ----------------------------------------------------
-  // ✅ UPDATE QUANTITY
-  // ----------------------------------------------------
-  const updateQty = async (id, type) => {
-    const item = cart.find((i) => i.id === id);
-    if (!item) return;
+  // BEST OFFER FINDER
+  useEffect(() => {
+    let best = null;
+    let saving = 0;
 
-    const newQty =
-      type === "inc" ? item.quantity + 1 : Math.max(1, item.quantity - 1);
-
-    await updateDoc(doc(db, "users", user.uid, "cart", id), {
-      quantity: newQty,
+    offers.forEach((o) => {
+      const d = computeDiscountForOffer(cart, o);
+      if (d > saving) {
+        saving = d;
+        best = o;
+      }
     });
 
-    fetchCart(); // refresh UI
-  };
+    setBestOffer(best);
+  }, [cart, offers]);
 
-  // ----------------------------------------------------
-  // ✅ REMOVE ITEM
-  // ----------------------------------------------------
+  /* REMOVE ITEM */
   const removeItem = async (id) => {
     await deleteDoc(doc(db, "users", user.uid, "cart", id));
-    fetchCart();
+    setCart(cart.filter((c) => c.id !== id));
   };
 
-  // ----------------------------------------------------
-  // SUBTOTAL
-  // ----------------------------------------------------
-  const subtotal = cart.reduce(
-    (acc, item) => acc + item.price * item.quantity,
-    0
-  );
+  /* UPDATE QTY */
+  const updateQty = async (id, type) => {
+    const item = cart.find((x) => x.id === id);
+    if (!item) return;
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-slate-900 px-4">
-        <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-lg text-center max-w-md w-full animate-fadeIn">
-          <h2 className="text-2xl font-semibold text-gray-800 dark:text-white">
-            🔐 Login Required
-          </h2>
+    const qty =
+      type === "inc" ? item.quantity + 1 : Math.max(1, item.quantity - 1);
 
-          <p className="mt-2 text-gray-600 dark:text-gray-300">
-            Please login to view your cart and continue shopping.
-          </p>
+    await updateDoc(doc(db, "users", user.uid, "cart", id), { quantity: qty });
 
-          <Link
-            href="/"
-            onClick={() => router.refresh()}
-            className="inline-block mt-6 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-6 rounded-lg shadow transition"
-          >
-            Go Back Home
-          </Link>
-        </div>
-      </div>
+    setCart(cart.map((x) => (x.id === id ? { ...x, quantity: qty } : x)));
+  };
+
+  /* MANUAL APPLY */
+  const applyOffer = async () => {
+    if (!offerInput.trim()) return;
+
+    try {
+      setChecking(true);
+      setOfferError("");
+
+      const qOffer = query(
+        collection(db, "offers"),
+        where("offerCode", "==", offerInput.trim().toUpperCase())
+      );
+
+      const snap = await getDocs(qOffer);
+
+      if (snap.empty) {
+        setOfferError("Invalid offer code");
+        return;
+      }
+
+      const offerData = {
+        id: snap.docs[0].id,
+        ...snap.docs[0].data(),
+      };
+
+      const res = await validateOfferForCart(user, cart, offerData);
+
+      if (!res.ok) {
+        setOfferError(res.reason);
+        return;
+      }
+
+      setAppliedOffer(offerData);
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  // totals
+  const subtotal = cart.reduce((a, b) => a + b.price * (b.quantity || 1), 0);
+
+  const discount = appliedOffer
+    ? computeDiscountForOffer(cart, appliedOffer)
+    : 0;
+
+  const deliveryCharge = subtotal > 50000 ? 0 : 40;
+
+  const total = subtotal - discount + deliveryCharge;
+
+  // Save pending checkout
+  const proceed = async () => {
+    await setDoc(
+      doc(db, "users", user.uid, "checkout", "pending"),
+      {
+        items: cart,
+        itemsSubtotal: subtotal,
+        discount,
+        deliveryCharge,
+        total,
+        offerId: appliedOffer?.id || "",
+        offerCode: appliedOffer?.offerCode || "",
+      },
+      { merge: true }
     );
-  }
+
+    router.push("/payment_page");
+  };
+
+  if (loading) return "Loading...";
 
   return (
-    <div className="min-h-screen bg-gray-100 py-10 px-4">
-      <div className="max-w-5xl mx-auto bg-white p-6 rounded-xl shadow-md">
-        {/* Go Back Button */}
-        <Link
-          href="/"
-          onClick={() => router.refresh()}
-          className="inline-flex items-center gap-2 mb-6 text-gray-700 hover:text-black transition"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="text-sm font-medium">Back</span>
-        </Link>
+    <div className="min-h-screen bg-gray-100 p-6">
+      <div className="max-w-6xl mx-auto bg-white p-6 rounded-xl shadow">
+        <div className="flex items-center gap-2 mb-6">
+          <Link href="/">
+            <ArrowLeft />
+          </Link>
+          <h2 className="text-xl font-semibold">Your Cart</h2>
+        </div>
 
-        <h2 className="text-2xl font-semibold mb-6">Your Cart</h2>
-
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="w-10 h-10 border-4 border-gray-400 border-t-black rounded-full animate-spin"></div>
-          </div>
-        ) : cart.length === 0 ? (
-          <p className="text-center text-gray-500 py-10">Your cart is empty.</p>
+        {cart.length === 0 ? (
+          <p className="text-center py-12 text-gray-500">Cart Empty</p>
         ) : (
-          <div className="space-y-6">
-            {cart.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between bg-gray-50 p-4 rounded-lg"
-              >
-                <div className="flex items-center gap-4">
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-20 h-20 rounded-lg object-cover border"
-                  />
-                  <div>
-                    <h3 className="font-semibold">{item.name}</h3>
-                    <p className="text-gray-600">₹{item.price}</p>
-                  </div>
-                </div>
-
-                {/* Quantity */}
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => updateQty(item.id, "dec")}
-                    className="w-8 h-8 bg-gray-200 rounded hover:bg-gray-300"
-                  >
-                    -
-                  </button>
-                  <span className="font-medium">{item.quantity}</span>
-                  <button
-                    onClick={() => updateQty(item.id, "inc")}
-                    className="w-8 h-8 bg-gray-200 rounded hover:bg-gray-300"
-                  >
-                    +
-                  </button>
-                </div>
-
-                {/* Remove */}
-                <button
-                  onClick={() => removeItem(item.id)}
-                  className="text-red-500 font-medium hover:underline"
+          <div className="grid grid-cols-3 gap-6">
+            {/* LEFT */}
+            <div className="col-span-2 space-y-4">
+              {cart.map((i) => (
+                <div
+                  key={i.id}
+                  className="bg-gray-50 border rounded-lg p-4 flex justify-between items-center"
                 >
-                  Remove
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={i.image}
+                      className="w-20 h-20 rounded-lg border"
+                    />
+                    <div>
+                      <h3 className="font-semibold">{i.name}</h3>
+                      <p>₹{i.price}</p>
+                    </div>
+                  </div>
 
-        {/* Summary */}
-        {cart.length !== 0 && !loading && (
-          <div className="mt-10 border-t pt-6">
-            <div className="flex justify-between text-lg font-semibold">
-              <span>Subtotal:</span>
-              <span>₹{subtotal}</span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      className="bg-gray-200  rounded p-1"
+                      onClick={() => updateQty(i.id, "dec")}
+                    >
+                      <Minus size={15} />
+                    </button>
+
+                    <span>{i.quantity}</span>
+
+                    <button
+                      className="bg-gray-200  rounded p-1"
+                      onClick={() => updateQty(i.id, "inc")}
+                    >
+                      <Plus size={15} />
+                    </button>
+                  </div>
+
+                  <button
+                    className="text-red-600"
+                    onClick={() => removeItem(i.id)}
+                  >
+                    <Trash2 />
+                  </button>
+                </div>
+              ))}
             </div>
 
-            <Link href={"/payment_page"}>
-              <button className="w-full mt-6 bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition">
+            {/* RIGHT */}
+            <div className="bg-gray-50 border p-5 rounded-xl h-fit">
+              {/* OFFER SUGGEST */}
+              {bestOffer && !appliedOffer && (
+                <div className="bg-green-50 p-2 rounded border text-sm">
+                  Best Offer: {bestOffer.offerCode}
+                  Save ₹{computeDiscountForOffer(cart, bestOffer)}
+                  <button
+                    className="ml-2 underline text-green-700"
+                    onClick={() => {
+                      setAppliedOffer(bestOffer);
+                      setOfferInput(bestOffer.offerCode);
+                    }}
+                  >
+                    Apply
+                  </button>
+                </div>
+              )}
+
+              {/* manual input */}
+              <input
+                className="border rounded w-full mt-3 p-2"
+                placeholder="Offer Code"
+                value={offerInput}
+                onChange={(e) => setOfferInput(e.target.value.toUpperCase())}
+              />
+
+              <button
+                onClick={applyOffer}
+                className="w-full bg-green-600 text-white rounded py-2 mt-2"
+                disabled={checking}
+              >
+                {checking ? "Checking..." : "Apply"}
+              </button>
+
+              {offerError && (
+                <p className="text-red-600 text-xs">{offerError}</p>
+              )}
+
+              {/* summary */}
+              <div className="border-t mt-4 pt-4 space-y-1">
+                <p className="flex justify-between">
+                  <span>Subtotal:</span>
+                  <span>₹{subtotal}</span>
+                </p>
+
+                {discount > 0 && (
+                  <p className="flex justify-between text-green-700">
+                    <span>Discount:</span>
+                    <span>-₹{discount}</span>
+                  </p>
+                )}
+
+                <p className="flex justify-between">
+                  <span>Delivery:</span>
+                  <span>
+                    {deliveryCharge === 0 ? "FREE" : `₹${deliveryCharge}`}
+                  </span>
+                </p>
+
+                <p className="flex justify-between text-lg font-bold">
+                  <span>Total:</span>
+                  <span>₹{total}</span>
+                </p>
+              </div>
+
+              <button
+                className="w-full bg-black text-white rounded py-3 mt-5"
+                onClick={proceed}
+              >
                 Proceed to Checkout
               </button>
-            </Link>
+            </div>
           </div>
         )}
       </div>
